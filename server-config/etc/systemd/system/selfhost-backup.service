@@ -1,0 +1,8 @@
+[Unit]
+Description=Self-hosted stack local backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/stacks/scripts/backup-stack.sh

@@ -1,0 +1,137 @@
+{
+  "id": "621b1e2e-e6bc-45e6-b450-10dc4dff7a61",
+  "name": "SME 07 - New Client Onboarding Kickoff",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Gmail Welcome** (`gmail_marc_oauth`)\n2. Add credential to **Google Sheets Onboarding** (`gsheets_oauth`)\n3. Add credential to **Telegram Founder Alert** (`telegram_bot_main`)\n4. Replace `REPLACE_CHAT_ID` and final onboarding sheet ID\n5. Connect webhook to your CRM 'deal won' event",
+        "height": 360,
+        "width": 520,
+        "color": 7
+      },
+      "id": "03188a81-7ac5-4873-b1cb-bf095b3ee77c",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sme-client-won",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "7c651eb5-6f40-4e8c-910a-1bd9c3d32deb",
+      "name": "Client Won Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nconst clientName = body.clientName || body.company || 'New client';\nconst contactEmail = body.email || 'todo@example.com';\n\nreturn {\n  json: {\n    clientName,\n    contactEmail,\n    plan: body.plan || 'Standard',\n    owner: body.owner || 'Marc',\n    wonAt: new Date().toISOString(),\n    chatId: 'REPLACE_CHAT_ID',\n    telegramText: `Deal won: ${clientName} (${contactEmail})`,\n    welcomeSubject: `Welcome ${clientName} - next steps`,\n    welcomeBody: [\n      `Hi ${clientName},`,\n      '',\n      'Great to start working together.',\n      'We will send onboarding details and schedule kickoff shortly.',\n      '',\n      'Best,',\n      'Marc'\n    ].join('\\n')\n  }\n};"
+      },
+      "id": "29039caf-e71d-4ccc-a60f-23a3e8b2e114",
+      "name": "Build Onboarding Pack",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Onboarding"
+        },
+        "options": {}
+      },
+      "id": "edbc3167-4408-46a4-96cd-551ce522bfc4",
+      "name": "Google Sheets Onboarding",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 240]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.contactEmail}}",
+        "subject": "={{$json.welcomeSubject}}",
+        "emailType": "text",
+        "message": "={{$json.welcomeBody}}",
+        "options": {}
+      },
+      "id": "5b212d90-101c-4356-accf-4db20de186e4",
+      "name": "Gmail Welcome",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 380]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "d368f6fb-016b-4992-9a46-e5f2b2a33532",
+      "name": "Telegram Founder Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 520]
+    }
+  ],
+  "connections": {
+    "Client Won Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Onboarding Pack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Onboarding Pack": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Onboarding",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gmail Welcome",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Founder Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "e968940a-c02d-4294-ac1a-38620df8795d",
+  "tags": []
+}

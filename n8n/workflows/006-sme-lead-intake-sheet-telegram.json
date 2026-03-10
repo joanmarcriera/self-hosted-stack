@@ -1,0 +1,115 @@
+{
+  "id": "672eaa66-0a3b-4863-a6bd-b1be726f4b06",
+  "name": "SME 01 - Lead Intake -> Sheet + Telegram",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Google Sheets Append** (`gsheets_oauth`)\n2. Add credential to **Telegram Sales Alert** (`telegram_bot_main`)\n3. Replace `REPLACE_CHAT_ID` in Code node\n4. Set final webhook path + update your website form\n5. Activate after one successful test payload",
+        "height": 330,
+        "width": 470,
+        "color": 7
+      },
+      "id": "43f4c3a3-4d9f-45d7-89a0-5cf526c418bf",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sme-lead-intake",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "0317d3d8-c165-47fe-9857-5b6b377b3be9",
+      "name": "Lead Intake Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nconst lead = {\n  name: body.name || body.fullName || 'Unknown',\n  email: body.email || 'unknown@example.com',\n  company: body.company || '',\n  phone: body.phone || '',\n  message: body.message || body.note || '',\n  source: body.source || 'website',\n  receivedAt: new Date().toISOString()\n};\n\nreturn {\n  json: {\n    ...lead,\n    chatId: 'REPLACE_CHAT_ID',\n    telegramText: [\n      'New lead received',\n      `Name: ${lead.name}`,\n      `Email: ${lead.email}`,\n      `Company: ${lead.company || '-'}`,\n      `Source: ${lead.source}`\n    ].join('\\n')\n  }\n};"
+      },
+      "id": "748fbee5-0a1d-4176-8743-424fac974989",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 360]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Leads"
+        },
+        "options": {}
+      },
+      "id": "796597a8-6662-4ba0-95f0-28bf40458eba",
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 280]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "4d8a92a1-b18c-44d0-9383-eec5d915752f",
+      "name": "Telegram Sales Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 440]
+    }
+  ],
+  "connections": {
+    "Lead Intake Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Append",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Sales Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "44381e04-c792-47b3-8373-1f070b5d4978",
+  "tags": []
+}

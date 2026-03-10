@@ -1,0 +1,9 @@
+[Unit]
+Description=Run self-hosted stack local backup daily
+
+[Timer]
+OnCalendar=*-*-* 03:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

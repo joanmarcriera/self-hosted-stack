@@ -1,0 +1,77 @@
+name: identity
+services:
+  authentik-server:
+    image: ghcr.io/goauthentik/server@sha256:46a71d75dfd3eec9bd0fb42e5e13a245394e1be2d0828eebfbb2662421e66a35
+    container_name: authentik-server
+    command: server
+    restart: unless-stopped
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: platform-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_DB_NAME}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_DB_USER}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL_HOST:-localhost}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL_PORT:-25}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL_USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL_PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL_USE_TLS:-false}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL_USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL_TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL_FROM:-authentik@localhost}
+    volumes:
+      - ./data/authentik:/data
+      - ./custom-templates:/templates
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=stack-net
+      - traefik.http.routers.auth.rule=Host(`${AUTH_HOST}`)
+      - traefik.http.routers.auth.entrypoints=websecure
+      - traefik.http.routers.auth.service=auth
+      - traefik.http.routers.auth.tls=true
+      - traefik.http.routers.auth.tls.certresolver=letsencrypt
+      - traefik.http.routers.auth-status-outpost.rule=Host(`${STATUS_HOST}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      - traefik.http.routers.auth-status-outpost.entrypoints=websecure
+      - traefik.http.routers.auth-status-outpost.tls=true
+      - traefik.http.routers.auth-status-outpost.tls.certresolver=letsencrypt
+      - traefik.http.routers.auth-status-outpost.priority=100
+      - traefik.http.routers.auth-status-outpost.service=auth-status-outpost
+      - traefik.http.services.auth.loadbalancer.server.port=9000
+      - traefik.http.services.auth-status-outpost.loadbalancer.server.port=9000
+    networks:
+      - stack-net
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server@sha256:46a71d75dfd3eec9bd0fb42e5e13a245394e1be2d0828eebfbb2662421e66a35
+    container_name: authentik-worker
+    command: worker
+    restart: unless-stopped
+    user: root
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: platform-postgres
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_DB_NAME}
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_DB_USER}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL_HOST:-localhost}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL_PORT:-25}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL_USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL_PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL_USE_TLS:-false}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL_USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL_TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL_FROM:-authentik@localhost}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN}
+    volumes:
+      - ./data/authentik:/data
+      - ./custom-templates:/templates
+    networks:
+      - stack-net
+
+networks:
+  stack-net:
+    external: true

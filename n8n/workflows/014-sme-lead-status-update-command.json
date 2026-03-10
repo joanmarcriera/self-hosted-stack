@@ -1,0 +1,115 @@
+{
+  "id": "f1f24710-adc1-44e4-9ce0-d6c85fd0871f",
+  "name": "SME 09 - Lead Status Update Command -> Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets Status Log** (`gsheets_oauth`)\n3. Command format: `/leadstatus <email> <status> <note>`\n4. Set spreadsheet ID + `Lead_Status_Log` sheet\n5. Activate and test with a dummy lead",
+        "height": 340,
+        "width": 510,
+        "color": 4
+      },
+      "id": "e2df7d2c-ac98-4ea2-b584-2c6b8e80667a",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a5263d26-ad5c-4670-9fe4-448ceff36eba",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/leadstatus\\s+(\\S+)\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      email: '',\n      status: '',\n      note: '',\n      updatedAt: new Date().toISOString(),\n      ackText: 'Usage: /leadstatus <email> <status> <note>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    email: m[1],\n    status: m[2],\n    note: m[3].trim(),\n    updatedAt: new Date().toISOString(),\n    ackText: `Lead status logged for ${m[1]} -> ${m[2]}`\n  }\n};"
+      },
+      "id": "f1d87cdb-c404-4d40-a0a1-ce1188e5aef6",
+      "name": "Parse Lead Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Lead_Status_Log"
+        },
+        "options": {}
+      },
+      "id": "f37d9067-7f97-47a3-9897-dcc14b344c9c",
+      "name": "Google Sheets Status Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "a73faa1e-7024-4c12-ace4-036a1252271a",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Status Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "6d7353c5-f876-4b8d-ac71-64cf59467545",
+  "tags": []
+}

@@ -1,0 +1,119 @@
+name: business
+services:
+  bookstack:
+    image: lscr.io/linuxserver/bookstack@sha256:251187a42c6b341e3a3b40bdd3bf8233b0250e3e8ee82293d470b17e5ad477c5
+    container_name: bookstack
+    restart: unless-stopped
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+      APP_URL: https://${DOCS_HOST}
+      APP_KEY: ${BOOKSTACK_APP_KEY}
+      DB_HOST: platform-mariadb
+      DB_PORT: 3306
+      DB_USERNAME: ${BOOKSTACK_DB_USER}
+      DB_PASSWORD: ${BOOKSTACK_DB_PASSWORD}
+      DB_DATABASE: ${BOOKSTACK_DB_NAME}
+      QUEUE_CONNECTION: database
+      AUTH_METHOD: oidc
+      AUTH_AUTO_INITIATE: "true"
+      OIDC_NAME: Authentik
+      OIDC_DISPLAY_NAME_CLAIMS: name
+      OIDC_CLIENT_ID: ${BOOKSTACK_OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${BOOKSTACK_OIDC_CLIENT_SECRET}
+      OIDC_ISSUER: ${BOOKSTACK_OIDC_ISSUER}
+      OIDC_ISSUER_DISCOVER: "true"
+      OIDC_EXTERNAL_ID_CLAIM: email
+      OIDC_ADDITIONAL_SCOPES: profile,email
+      OIDC_END_SESSION_ENDPOINT: "true"
+    volumes:
+      - ./data/bookstack:/config
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=stack-net
+      - traefik.http.routers.docs.rule=Host(`${DOCS_HOST}`)
+      - traefik.http.routers.docs.entrypoints=websecure
+      - traefik.http.routers.docs.tls=true
+      - traefik.http.routers.docs.tls.certresolver=letsencrypt
+      - traefik.http.services.docs.loadbalancer.server.port=80
+    networks:
+      - stack-net
+
+  espocrm:
+    image: espocrm/espocrm@sha256:e6361c3828eedad8cd735b9c24cfc3290c7c6414dfac5cddf44d3a31f752943c
+    container_name: espocrm
+    restart: unless-stopped
+    environment:
+      ESPOCRM_DATABASE_PLATFORM: Mysql
+      ESPOCRM_DATABASE_HOST: platform-mariadb
+      ESPOCRM_DATABASE_NAME: ${ESPOCRM_DB_NAME}
+      ESPOCRM_DATABASE_USER: ${ESPOCRM_DB_USER}
+      ESPOCRM_DATABASE_PASSWORD: ${ESPOCRM_DB_PASSWORD}
+      ESPOCRM_ADMIN_USERNAME: ${ESPOCRM_ADMIN_USERNAME}
+      ESPOCRM_ADMIN_PASSWORD: ${ESPOCRM_ADMIN_PASSWORD}
+      ESPOCRM_SITE_URL: https://${CRM_HOST}
+    volumes:
+      - ./data/espocrm:/var/www/html
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=stack-net
+      - traefik.http.routers.crm.rule=Host(`${CRM_HOST}`)
+      - traefik.http.routers.crm.entrypoints=websecure
+      - traefik.http.routers.crm.tls=true
+      - traefik.http.routers.crm.tls.certresolver=letsencrypt
+      - traefik.http.services.crm.loadbalancer.server.port=80
+    networks:
+      - stack-net
+
+  espocrm-daemon:
+    image: espocrm/espocrm@sha256:e6361c3828eedad8cd735b9c24cfc3290c7c6414dfac5cddf44d3a31f752943c
+    container_name: espocrm-daemon
+    restart: unless-stopped
+    entrypoint: docker-daemon.sh
+    environment:
+      ESPOCRM_DATABASE_PLATFORM: Mysql
+      ESPOCRM_DATABASE_HOST: platform-mariadb
+      ESPOCRM_DATABASE_NAME: ${ESPOCRM_DB_NAME}
+      ESPOCRM_DATABASE_USER: ${ESPOCRM_DB_USER}
+      ESPOCRM_DATABASE_PASSWORD: ${ESPOCRM_DB_PASSWORD}
+      ESPOCRM_SITE_URL: https://${CRM_HOST}
+    volumes:
+      - ./data/espocrm:/var/www/html
+    networks:
+      - stack-net
+
+  vikunja:
+    image: vikunja/vikunja@sha256:f13103b0287aef74a69241fa46e6cac76e14caf643602144ccaca57fc76e587f
+    container_name: vikunja
+    restart: unless-stopped
+    environment:
+      XDG_CACHE_HOME: /tmp/.cache
+      VIKUNJA_AUTH_LOCAL_ENABLED: "false"
+      VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_JWT_SECRET}
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+      VIKUNJA_SERVICE_PUBLICURL: https://${TASKS_HOST}/
+      VIKUNJA_DATABASE_PATH: /db/vikunja.db
+    volumes:
+      - ./data/vikunja/files:/app/vikunja/files
+      - ./data/vikunja/db:/db
+      - ./config/vikunja/config.yml:/app/vikunja/config.yml:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=stack-net
+      - traefik.http.routers.tasks.rule=Host(`${TASKS_HOST}`)
+      - traefik.http.routers.tasks.entrypoints=websecure
+      - traefik.http.routers.tasks.middlewares=tasks-oidc-root,tasks-oidc-login
+      - traefik.http.routers.tasks.tls=true
+      - traefik.http.routers.tasks.tls.certresolver=letsencrypt
+      - traefik.http.middlewares.tasks-oidc-root.redirectregex.regex=^https://${TASKS_HOST}/$
+      - traefik.http.middlewares.tasks-oidc-root.redirectregex.replacement=https://${TASKS_HOST}/login?redirectToProvider=authentik
+      - traefik.http.middlewares.tasks-oidc-login.redirectregex.regex=^https://${TASKS_HOST}/login$
+      - traefik.http.middlewares.tasks-oidc-login.redirectregex.replacement=https://${TASKS_HOST}/login?redirectToProvider=authentik
+      - traefik.http.services.tasks.loadbalancer.server.port=3456
+    networks:
+      - stack-net
+
+networks:
+  stack-net:
+    external: true

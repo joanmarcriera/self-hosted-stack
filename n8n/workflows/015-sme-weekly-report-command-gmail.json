@@ -1,0 +1,111 @@
+{
+  "id": "b7a3f737-a786-4f66-aff4-fd6315925edd",
+  "name": "SME 10 - Weekly Report Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send Weekly** (`gmail_marc_oauth`)\n3. Command format: `/weekly <toEmail> <weekLabel>`\n4. Replace placeholder sections in weekly email template\n5. Activate after one dry-run to yourself",
+        "height": 350,
+        "width": 500,
+        "color": 7
+      },
+      "id": "e7fb9e27-5b5b-4408-af62-cfbdf6c51ac5",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "a1afd341-78d0-46ac-b897-3880cb52b09b",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/weekly\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: '',\n      subject: '',\n      message: '',\n      ackText: 'Usage: /weekly <toEmail> <weekLabel>'\n    }\n  };\n}\n\nconst toEmail = m[1];\nconst weekLabel = m[2].trim();\nreturn {\n  json: {\n    chatId,\n    sendTo: toEmail,\n    subject: `Weekly operations report - ${weekLabel}`,\n    message: [\n      `Weekly report (${weekLabel})`,\n      '',\n      '1) Pipeline: TODO',\n      '2) Sales activities: TODO',\n      '3) Delivery status: TODO',\n      '4) Risks/blockers: TODO',\n      '',\n      'Prepared automatically via n8n draft workflow.'\n    ].join('\\n'),\n    ackText: `Weekly report prepared for ${toEmail}`\n  }\n};"
+      },
+      "id": "2ee8592e-7aa3-47a9-8bd4-443e362c19a8",
+      "name": "Parse Weekly Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.message}}",
+        "options": {}
+      },
+      "id": "1b74509d-92de-464a-bc62-b0a8ce520e32",
+      "name": "Gmail Send Weekly",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "6b91dede-b082-4241-b778-84a1148f1349",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Weekly Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Weekly Command": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Weekly",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "c6645c2f-011c-4883-a872-e0d3b856fc2f",
+  "tags": []
+}

@@ -1,0 +1,115 @@
+{
+  "id": "2acd2fa5-3493-45f3-8172-8d827b035a9f",
+  "name": "FAMILY 08 - Expense Command -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Expense Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets Family Expenses** (`gsheets_oauth`)\n3. Command format: `/expense <amount> <category> <note>`\n4. Set spreadsheet ID + `Family_Expenses` sheet\n5. Activate after one week of test entries",
+        "height": 340,
+        "width": 520,
+        "color": 6
+      },
+      "id": "88d4d422-6d3a-46c5-932e-625632322466",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "fe19b770-7e8a-409b-8670-4fa6580068a4",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/expense\\s+(\\S+)\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      amount: '',\n      category: '',\n      note: '',\n      loggedAt: new Date().toISOString(),\n      ackText: 'Usage: /expense <amount> <category> <note>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    amount: m[1],\n    category: m[2],\n    note: m[3].trim(),\n    loggedAt: new Date().toISOString(),\n    ackText: `Expense logged: ${m[1]} in ${m[2]}`\n  }\n};"
+      },
+      "id": "d6ab36cd-600b-4c74-88c3-d98ef6e22e13",
+      "name": "Parse Expense Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Family_Expenses"
+        },
+        "options": {}
+      },
+      "id": "be1f80a6-6053-490e-b0cb-4a55f356702a",
+      "name": "Google Sheets Family Expenses",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "98cf5e7c-dcd8-4c5b-9b11-e8a1534057a7",
+      "name": "Telegram Expense Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Expense Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Expense Command": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Family Expenses",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Expense Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "9d476d43-82a7-49f8-b987-5aa4c9983df9",
+  "tags": []
+}

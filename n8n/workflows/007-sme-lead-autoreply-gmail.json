@@ -1,0 +1,111 @@
+{
+  "id": "bba43160-a899-4fca-a82c-02c7cb6e9b60",
+  "name": "SME 02 - Lead Auto-Reply (Gmail)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Gmail Send** (`gmail_marc_oauth`)\n2. Update reply template tone + signature in `Build Reply`\n3. Confirm sender mailbox (`marc@riera.co.uk`) is connected\n4. Add credential to **Telegram Internal Ping** if you want alerts\n5. Activate after sending one test lead",
+        "height": 350,
+        "width": 480,
+        "color": 6
+      },
+      "id": "ad7b6f34-8cf4-49ec-ad9b-f035d9a964d1",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sme-lead-autoreply",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d1faa0b8-cdb7-408c-b01e-d9d31e31c0cf",
+      "name": "Lead Reply Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nconst toEmail = body.email || '';\nif (!toEmail) throw new Error('Missing lead email');\n\nconst name = body.name || 'there';\nconst company = body.company || 'your company';\n\nreturn {\n  json: {\n    toEmail,\n    subject: `Thanks for reaching out, ${name}` ,\n    message: [\n      `Hi ${name},`,\n      '',\n      `Thanks for contacting us about automation for ${company}.`,\n      'We received your message and will get back to you shortly with next steps.',\n      '',\n      'Best,',\n      'Marc'\n    ].join('\\n'),\n    internalText: `Auto-reply sent to ${toEmail}`\n  }\n};"
+      },
+      "id": "744835ef-3d15-4a47-b4e6-4e4ae0073d11",
+      "name": "Build Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.toEmail}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.message}}",
+        "options": {}
+      },
+      "id": "3a503547-814b-45bd-a1b5-b74e734071ca",
+      "name": "Gmail Send",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "REPLACE_CHAT_ID",
+        "text": "={{$json.internalText}}",
+        "additionalFields": {}
+      },
+      "id": "61009c79-d005-4c70-aa59-ef8cf56261ec",
+      "name": "Telegram Internal Ping",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Lead Reply Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reply": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Internal Ping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "d91ab289-e4c7-4e64-93ae-8b5b8c932162",
+  "tags": []
+}

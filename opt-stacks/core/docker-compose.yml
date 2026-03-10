@@ -1,0 +1,71 @@
+name: core
+services:
+  docker-socket-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy@sha256:9e4b9e7517a6b660f2cc903a19b257b1852d5b3344794e3ea334ff00ae677ac2
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      SERVICES: 1
+      TASKS: 1
+      INFO: 1
+      PING: 1
+      VERSION: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - stack-net
+
+  traefik:
+    image: traefik@sha256:a9890c898f379c1905ee5b28342f6b408dc863f08db2dab20e46c267d1ff463a
+    container_name: traefik
+    restart: unless-stopped
+    depends_on:
+      - docker-socket-proxy
+    environment:
+      DOCKER_API_VERSION: "1.45"
+    command:
+      - --providers.docker=true
+      - --providers.docker.endpoint=tcp://docker-socket-proxy:2375
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=stack-net
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.caserver=https://acme-v02.api.letsencrypt.org/directory
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+      - --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data/letsencrypt:/letsencrypt
+    networks:
+      - stack-net
+
+  landing:
+    image: nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    container_name: landing
+    restart: unless-stopped
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=stack-net
+      - traefik.http.routers.landing.rule=Host(`${LANDING_HOST}`) || Host(`${LANDING_WWW_HOST}`)
+      - traefik.http.routers.landing.entrypoints=websecure
+      - traefik.http.routers.landing.tls=true
+      - traefik.http.routers.landing.tls.certresolver=letsencrypt
+      - traefik.http.services.landing.loadbalancer.server.port=80
+    networks:
+      - stack-net
+
+networks:
+  stack-net:
+    external: true

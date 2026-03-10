@@ -1,0 +1,111 @@
+{
+  "id": "d21544f7-42f9-4618-aff7-5c7aa4b754b3",
+  "name": "FAMILY 09 - Absence Note Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send Absence Note** (`gmail_rb4family_oauth`)\n3. Command format: `/absence <kid> <date> <reason>`\n4. Replace `REPLACE_SCHOOL_EMAIL@example.com` in parser fallback\n5. Activate after sending one test to your own email first",
+        "height": 360,
+        "width": 520,
+        "color": 3
+      },
+      "id": "4d463156-1816-4af8-ab6b-89d66f96b228",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "7794008b-744b-4799-9dbb-f7b93b8b7af6",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/absence\\s+(\\S+)\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: 'REPLACE_SCHOOL_EMAIL@example.com',\n      subject: 'Absence notification',\n      body: '',\n      ackText: 'Usage: /absence <kid> <date> <reason>'\n    }\n  };\n}\n\nconst kid = m[1];\nconst date = m[2];\nconst reason = m[3].trim();\n\nreturn {\n  json: {\n    chatId,\n    sendTo: 'REPLACE_SCHOOL_EMAIL@example.com',\n    subject: `Absence note - ${kid} - ${date}`,\n    body: [\n      'Hello,',\n      '',\n      `Please note that ${kid} will be absent on ${date}.`,\n      `Reason: ${reason}.`,\n      '',\n      'Thank you.'\n    ].join('\\n'),\n    ackText: `Absence note prepared for ${kid} (${date})`\n  }\n};"
+      },
+      "id": "8821689d-2d70-474a-a3b6-300fcab50d29",
+      "name": "Build Absence Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.body}}",
+        "options": {}
+      },
+      "id": "3d6e6772-7070-4000-a8e8-e140dc6e4811",
+      "name": "Gmail Send Absence Note",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "f3e8ada3-fbaf-46d1-b0b1-8e03273f5520",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Absence Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Absence Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Absence Note",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "92aac9e9-c728-488b-9f29-41e1f592069a",
+  "tags": []
+}

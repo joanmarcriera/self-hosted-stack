@@ -1,0 +1,54 @@
+name: token-hygiene
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  docs-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce markdown/text size cap
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              base="$(git rev-parse HEAD~1)"
+            else
+              echo "No previous commit to compare; skipping."
+              exit 0
+            fi
+          fi
+
+          changed="$(git diff --name-only "$base" HEAD -- '*.md' '*.txt' || true)"
+          if [[ -z "$changed" ]]; then
+            echo "No markdown/text changes."
+            exit 0
+          fi
+
+          max_bytes=120000
+          failed=0
+
+          while IFS= read -r file; do
+            [[ -f "$file" ]] || continue
+            size="$(wc -c < "$file")"
+            echo "$file => $size bytes"
+            if (( size > max_bytes )); then
+              echo "::error file=$file::File exceeds ${max_bytes} bytes. Split or shorten it."
+              failed=1
+            fi
+          done <<< "$changed"
+
+          if (( failed )); then
+            exit 1
+          fi

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: stack-overview
+    orgId: 1
+    folder: SME Stack
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

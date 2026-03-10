@@ -1,0 +1,5 @@
+.secrets/
+reports/
+.env.local
+.DS_Store
+.minimax/

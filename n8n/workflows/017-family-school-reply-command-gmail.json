@@ -1,0 +1,111 @@
+{
+  "id": "e7ebb109-6cd4-4815-9821-b7e122647a1f",
+  "name": "FAMILY 02 - School Reply Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send School Reply** (`gmail_rb4family_oauth`)\n3. Command format: `/schoolreply <email> <message>`\n4. Replace default fallback school email\n5. Activate after one safe test to your own mailbox",
+        "height": 340,
+        "width": 500,
+        "color": 6
+      },
+      "id": "dcff3584-91b8-4cf6-8966-169272c9d15d",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "682b9e9d-3a14-4ad0-8986-27e8d2769bee",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/schoolreply\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: 'school@example.com',\n      subject: 'Re: school message',\n      body: '',\n      ackText: 'Usage: /schoolreply <email> <message>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    sendTo: m[1],\n    subject: 'Re: school message',\n    body: m[2].trim(),\n    ackText: `School reply prepared for ${m[1]}`\n  }\n};"
+      },
+      "id": "ea45db41-b1e4-455b-a6c0-72f55edfaebe",
+      "name": "Parse Reply Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.body}}",
+        "options": {}
+      },
+      "id": "dceb2373-2550-4662-9447-41956e3389ef",
+      "name": "Gmail Send School Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "70fe9597-bf52-4d06-a3d8-93b98e210a16",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Reply Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reply Command": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send School Reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "70986334-7a7d-4d04-8330-b9d24eb29bdd",
+  "tags": []
+}

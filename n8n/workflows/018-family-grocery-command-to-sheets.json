@@ -1,0 +1,115 @@
+{
+  "id": "d2e0e309-d3d5-4b09-94c9-2324aac303a4",
+  "name": "FAMILY 03 - Grocery Add Command -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Grocery Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets Grocery List** (`gsheets_oauth`)\n3. Command format: `/buy <item> <qty>`\n4. Set spreadsheet ID + sheet name (`Groceries`)\n5. Activate after a few test commands",
+        "height": 340,
+        "width": 510,
+        "color": 5
+      },
+      "id": "15f07ada-a82a-4ff6-9642-7cdefd5062ac",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "6dfcb02d-fbae-4c63-9c5d-000484c657a9",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/buy\\s+([\\s\\S]+?)\\s+(\\S+)$/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      item: '',\n      qty: '',\n      addedAt: new Date().toISOString(),\n      ackText: 'Usage: /buy <item> <qty>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    item: m[1].trim(),\n    qty: m[2],\n    addedAt: new Date().toISOString(),\n    ackText: `Added to grocery list: ${m[1].trim()} x ${m[2]}`\n  }\n};"
+      },
+      "id": "f3637d05-df19-4809-b4dd-8aabdcc5baa7",
+      "name": "Parse Buy Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Groceries"
+        },
+        "options": {}
+      },
+      "id": "044c1a1d-bd57-4f1c-b86f-230137b76be2",
+      "name": "Google Sheets Grocery List",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "f04db344-e97a-42b1-8257-968d9f44bff0",
+      "name": "Telegram Grocery Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Buy Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Buy Command": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Grocery List",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Grocery Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "624c0bd6-fa6c-4f83-9e0b-d1571ca48693",
+  "tags": []
+}

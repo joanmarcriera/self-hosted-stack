@@ -1,0 +1,90 @@
+{
+  "id": "46ba68f8-cf5b-4291-823f-06407b010ef1",
+  "name": "FAMILY 01 - School Email Triage -> Telegram",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **School Gmail Trigger** (`gmail_rb4family_oauth`)\n2. Add credential to **Telegram Family Alert** (`telegram_bot_main`)\n3. Replace `REPLACE_CHAT_ID` in `Classify School Email`\n4. In Gmail Trigger, filter to school-related labels if possible\n5. Activate after 1-2 test emails",
+        "height": 360,
+        "width": 500,
+        "color": 7
+      },
+      "id": "fb1af276-d632-4ca8-bea9-4f9c206f59ce",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": true,
+        "filters": {},
+        "options": {}
+      },
+      "id": "1d949b6c-8b58-4e68-9281-ddaffb74e43e",
+      "name": "School Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [300, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const subject = j.subject || '(no subject)';\n  const from = j.from?.value?.[0]?.address || j.from || 'unknown';\n  const snippet = [j.snippet, j.textPlain, j.bodyPlain].filter(Boolean).join('\\n').slice(0, 500);\n  const combined = `${subject}\\n${snippet}`;\n\n  let tag = 'INFO';\n  if (/urgent|tomorrow|deadline|last call/i.test(combined)) tag = 'URGENT';\n  else if (/trip|permission|consent/i.test(combined)) tag = 'ACTION';\n  else if (/payment|fee|invoice/i.test(combined)) tag = 'MONEY';\n  else if (/homework|assignment|exam|test/i.test(combined)) tag = 'STUDY';\n\n  out.push({\n    json: {\n      chatId: 'REPLACE_CHAT_ID',\n      telegramText: [\n        `School email: ${tag}`,\n        `From: ${from}`,\n        `Subject: ${subject}`,\n        '',\n        snippet || '(no preview)'\n      ].join('\\n')\n    }\n  });\n}\nreturn out;"
+      },
+      "id": "5d6fb27c-876d-407c-ab2f-bbb27d385d49",
+      "name": "Classify School Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 360]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "d37008ad-3a09-4d5d-b8df-e7dd12b1b06b",
+      "name": "Telegram Family Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 360]
+    }
+  ],
+  "connections": {
+    "School Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify School Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify School Email": {
+      "main": [
+        [
+          {
+            "node": "Telegram Family Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "c931a11e-942e-4cb3-9b7a-c81dabc23a13",
+  "tags": []
+}

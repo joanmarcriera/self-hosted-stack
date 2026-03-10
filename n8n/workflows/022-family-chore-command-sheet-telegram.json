@@ -1,0 +1,115 @@
+{
+  "id": "c0567d14-92f8-4fb7-87d8-08f7199a925c",
+  "name": "FAMILY 07 - Chore Done Command -> Sheet + Telegram",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Chore Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets Chore Log** (`gsheets_oauth`)\n3. Command format: `/chore <kid> <task>`\n4. Set spreadsheet ID + `Chores` sheet\n5. Activate after testing each kid command once",
+        "height": 340,
+        "width": 510,
+        "color": 5
+      },
+      "id": "a2bd4bb4-aac0-4b17-ae3e-2985d3a86b1a",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "d60bedb8-50e7-452e-abd5-40c04ca8a99f",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/chore\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      kid: '',\n      task: '',\n      doneAt: new Date().toISOString(),\n      ackText: 'Usage: /chore <kid> <task>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    kid: m[1],\n    task: m[2].trim(),\n    doneAt: new Date().toISOString(),\n    ackText: `Chore logged: ${m[1]} - ${m[2].trim()}`\n  }\n};"
+      },
+      "id": "ac1b0e91-66f4-40c7-8549-fc41144c1570",
+      "name": "Parse Chore Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Chores"
+        },
+        "options": {}
+      },
+      "id": "3fef0b3d-56ad-4511-8caf-66df711e0647",
+      "name": "Google Sheets Chore Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "6e65d4f0-d442-4370-aa67-cf0115e2b019",
+      "name": "Telegram Chore Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Chore Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Chore Command": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Chore Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Chore Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "e0525708-3f8b-41c9-9cc0-08289d66b1b3",
+  "tags": []
+}

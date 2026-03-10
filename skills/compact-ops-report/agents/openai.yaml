@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compact Ops Report"
+  short_description: "Produce short, repeatable server reports with fixed sections."
+  default_prompt: "Generate a concise operational report using the fixed template."

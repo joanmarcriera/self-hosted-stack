@@ -1,0 +1,115 @@
+{
+  "id": "03386014-47d0-462c-8b85-c4261cc4870f",
+  "name": "FAMILY 04 - Meal Plan Command -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Meal Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets Meal Plan** (`gsheets_oauth`)\n3. Command format: `/meal <day> <dinner>`\n4. Set spreadsheet ID + sheet name (`Meal_Plan`)\n5. Activate after a full week test",
+        "height": 340,
+        "width": 510,
+        "color": 6
+      },
+      "id": "6e1ac987-0bfb-470f-b643-518e74a37b29",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "99f2826e-af86-493a-bf6b-bdc747c3f3f5",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/meal\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      day: '',\n      dinner: '',\n      plannedAt: new Date().toISOString(),\n      ackText: 'Usage: /meal <day> <dinner>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    day: m[1],\n    dinner: m[2].trim(),\n    plannedAt: new Date().toISOString(),\n    ackText: `Meal planned for ${m[1]}: ${m[2].trim()}`\n  }\n};"
+      },
+      "id": "6830826c-278a-4d15-aad7-275480554e80",
+      "name": "Parse Meal Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Meal_Plan"
+        },
+        "options": {}
+      },
+      "id": "318eb3c4-cd72-4152-afc3-3db81349da43",
+      "name": "Google Sheets Meal Plan",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "3799ba35-792a-4208-a568-4140c64f4200",
+      "name": "Telegram Meal Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Meal Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Meal Command": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Meal Plan",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Meal Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "05760fbd-9af2-4846-999f-c5bef3889ee6",
+  "tags": []
+}

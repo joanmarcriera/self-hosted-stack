@@ -1,0 +1,115 @@
+{
+  "id": "6b131870-a049-4709-9180-6427ca047abb",
+  "name": "FAMILY 05 - Kids Activities Webhook -> Sheet + Telegram",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Google Sheets Activities** (`gsheets_oauth`)\n2. Add credential to **Telegram Activity Alert** (`telegram_bot_main`)\n3. Replace `REPLACE_CHAT_ID` in `Normalize Activity`\n4. Set final webhook path and wire it to your form/app\n5. Activate after one test payload",
+        "height": 350,
+        "width": 520,
+        "color": 7
+      },
+      "id": "227aefab-1544-4442-bf24-3653a15edd30",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "family-activity",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "37a55ff7-aaa3-4db0-9d53-8514f4b906dd",
+      "name": "Activity Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nconst kid = body.kid || body.child || 'Unknown';\nconst activity = body.activity || body.event || 'Unknown activity';\nconst when = body.when || body.date || 'TBD';\n\nreturn {\n  json: {\n    kid,\n    activity,\n    when,\n    location: body.location || '',\n    notes: body.notes || '',\n    createdAt: new Date().toISOString(),\n    chatId: 'REPLACE_CHAT_ID',\n    telegramText: `Activity saved: ${kid} - ${activity} (${when})`\n  }\n};"
+      },
+      "id": "9e7c3019-5f6a-45df-bb4c-fb8fcad14437",
+      "name": "Normalize Activity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Activities"
+        },
+        "options": {}
+      },
+      "id": "2a080a2c-2f33-49d8-a497-ad550c711cc7",
+      "name": "Google Sheets Activities",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "b1a171d0-67aa-426f-bd0c-3d0027d3ffba",
+      "name": "Telegram Activity Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Activity Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Activity": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Activities",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Activity Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "4f36d8a4-06b0-4d0b-9511-59b1d509fba5",
+  "tags": []
+}

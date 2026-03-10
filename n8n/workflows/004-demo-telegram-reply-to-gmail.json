@@ -1,0 +1,111 @@
+{
+  "id": "5b405e26-638d-4484-a3cb-94da12cdab37",
+  "name": "DEMO - Telegram Reply -> Gmail Send",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** and **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send** (`gmail_marc_oauth`)\n3. Replace `REPLACE_TARGET_EMAIL@example.com` fallback in parser\n4. Tomorrow: replace fallback target with lookup from pending cases\n5. Activate workflow",
+        "height": 360,
+        "width": 460,
+        "color": 5
+      },
+      "id": "42f52f5d-cd88-474f-b2c9-c54efeb848fd",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "00c3dbb6-b976-4746-8118-f4db8c1fb6f6",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [280, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/reply\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: 'REPLACE_TARGET_EMAIL@example.com',\n      subject: 'Re: TODO subject',\n      body: '',\n      ackText: 'Usage: /reply <caseId> <message>',\n      shouldSend: false\n    }\n  };\n}\n\nconst caseId = m[1];\nconst responseText = m[2].trim();\n\nreturn {\n  json: {\n    chatId,\n    sendTo: 'REPLACE_TARGET_EMAIL@example.com',\n    subject: `Re: TODO subject for ${caseId}`,\n    body: responseText,\n    ackText: `Prepared reply for case ${caseId}.`,\n    shouldSend: true\n  }\n};"
+      },
+      "id": "d6214db8-3f42-47c4-aad7-746d94b57f25",
+      "name": "Parse Reply Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.body}}",
+        "options": {}
+      },
+      "id": "2f1f7b0f-dfd6-44af-a8d6-8d9f34dff557",
+      "name": "Gmail Send",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.shouldSend ? $json.ackText + ' (Gmail node configured path)' : $json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "ad70f7e3-3e36-492b-8efc-99109ecb64bb",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [840, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Reply Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reply Command": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "e7c93b56-fbaa-4f9d-9e28-f8e40feeaf12",
+  "tags": []
+}

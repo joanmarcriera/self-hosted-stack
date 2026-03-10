@@ -1,0 +1,104 @@
+{
+  "id": "1d11f60d-44b4-4438-9f76-cf52e5f211f4",
+  "name": "TLS Expiry Guard - n8n.joanmarcriera.es",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "id": "0a126966-4cc0-46ec-b662-46f39f1f51f5",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://crt.sh/?q=n8n.joanmarcriera.es&output=json",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "87cefc6f-e4f5-4bb3-bd6c-6df341bcbf36",
+      "name": "Fetch crt.sh Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nif (!items.length) {\n  throw new Error('No certificate records returned by crt.sh');\n}\n\nlet bestTs = -1;\nfor (const item of items) {\n  const raw = item.json?.not_after;\n  if (typeof raw !== 'string' || !raw) continue;\n  const ts = Date.parse(raw.endsWith('Z') ? raw : `${raw}Z`);\n  if (Number.isFinite(ts) && ts > bestTs) bestTs = ts;\n}\n\nif (bestTs < 0) {\n  throw new Error('Could not parse any not_after timestamps from crt.sh response');\n}\n\nconst daysLeft = Math.floor((bestTs - Date.now()) / 86400000);\nreturn [{\n  json: {\n    host: 'n8n.joanmarcriera.es',\n    source: 'crt.sh',\n    recordCount: items.length,\n    certExpiresAtUtc: new Date(bestTs).toISOString(),\n    daysLeft,\n    thresholdDays: 21,\n    checkedAtUtc: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "6bd3f8f8-c600-4926-b597-dc5788fcacc8",
+      "name": "Parse Cert Expiry",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "if ($json.daysLeft < $json.thresholdDays) {\n  throw new Error(`TLS certificate for ${$json.host} expires in ${$json.daysLeft} days (expiry ${$json.certExpiresAtUtc})`);\n}\nreturn {\n  json: {\n    ...$json,\n    ok: true,\n    message: `TLS certificate healthy: ${$json.daysLeft} days left`\n  }\n};"
+      },
+      "id": "2d827c09-819e-4d5f-9945-9be0423636ff",
+      "name": "Enforce Threshold",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 300]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch crt.sh Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch crt.sh Data": {
+      "main": [
+        [
+          {
+            "node": "Parse Cert Expiry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Cert Expiry": {
+      "main": [
+        [
+          {
+            "node": "Enforce Threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "8c6fe592-83f0-4550-9a53-a3fb6de6f4e2",
+  "tags": []
+}

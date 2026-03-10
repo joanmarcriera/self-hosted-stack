@@ -1,0 +1,96 @@
+{
+  "id": "2b7ef725-c071-4508-a68e-b0d1fa59fee9",
+  "name": "DEMO - Webhook Lead -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Google Sheets Append** (`gsheets_oauth`)\n2. Set Spreadsheet ID + Sheet name\n3. Decide final webhook path and keep it secret\n4. Test with sample POST payload\n5. Activate workflow",
+        "height": 320,
+        "width": 440,
+        "color": 7
+      },
+      "id": "9754f589-5814-4c75-a302-47683ea45e28",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-demo",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "de7a9782-14d5-4bc4-95ad-cd182adcbfea",
+      "name": "Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [280, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nreturn {\n  json: {\n    name: body.name || body.fullName || 'Unknown',\n    email: body.email || 'unknown@example.com',\n    company: body.company || '',\n    message: body.message || body.note || '',\n    source: body.source || 'webhook',\n    receivedAt: new Date().toISOString()\n  }\n};"
+      },
+      "id": "4915950e-cea4-4404-9912-83af37788852",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 360]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Leads"
+        },
+        "options": {}
+      },
+      "id": "c73f6108-cd7f-4088-80eb-37ef4229f6cb",
+      "name": "Google Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [840, 360]
+    }
+  ],
+  "connections": {
+    "Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "cd06ac4b-a647-4826-97be-9f53caeeac89",
+  "tags": []
+}

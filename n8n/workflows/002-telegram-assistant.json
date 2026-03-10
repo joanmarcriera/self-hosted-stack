@@ -1,0 +1,95 @@
+{
+  "id": "d387beed-c901-4957-b463-c9f90b3ddfae",
+  "name": "Telegram Assistant - Starter",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "4866f111-abde-4043-a90e-f50fb3d8f9a0",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "name": "telegram_bot_main"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const text = ($json.message?.text || '').trim();\nconst chatId = $json.message?.chat?.id;\nif (!chatId) throw new Error('No Telegram chat id in payload');\n\nlet replyText = '';\nif (text === '/ping') {\n  replyText = 'pong';\n} else if (text === '/id') {\n  replyText = `chat_id: ${chatId}`;\n} else if (text === '/help' || text === '/start') {\n  replyText = [\n    'Available commands:',\n    '/ping - check bot is alive',\n    '/id - show your chat id',\n    '/help - show this help',\n    '',\n    'Tomorrow we will attach Gmail potato flow to this bot.'\n  ].join('\\n');\n} else {\n  replyText = 'Unknown command. Send /help';\n}\n\nreturn { json: { chatId: String(chatId), replyText } };"
+      },
+      "id": "4b8e0f5c-4f0d-4fd9-ab0a-0f2747c5e902",
+      "name": "Build Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.replyText}}",
+        "additionalFields": {}
+      },
+      "id": "0c9c9150-c729-4bf6-992e-fb8f88d7a7b1",
+      "name": "Telegram Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "name": "telegram_bot_main"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reply": {
+      "main": [
+        [
+          {
+            "node": "Telegram Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "776dd032-4ac8-43ad-9d79-6f450fd52d27",
+  "tags": []
+}

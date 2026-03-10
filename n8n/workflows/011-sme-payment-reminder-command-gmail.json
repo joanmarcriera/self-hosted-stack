@@ -1,0 +1,111 @@
+{
+  "id": "f6e099bd-ecdf-44df-9073-3faee719a342",
+  "name": "SME 06 - Payment Reminder Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send Reminder** (`gmail_marc_oauth`)\n3. Command format: `/remind <email> <amount> <dueDate>`\n4. Edit reminder message tone to your style\n5. Activate after testing with your own email",
+        "height": 350,
+        "width": 500,
+        "color": 6
+      },
+      "id": "c78433bf-14b6-4bb8-98e2-3ebc002cf1c9",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "91df20f9-63ec-4ee2-8af6-a0379254d48c",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/remind\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: 'example@client.com',\n      subject: 'Payment reminder',\n      message: '',\n      ackText: 'Usage: /remind <email> <amount> <dueDate>'\n    }\n  };\n}\n\nconst [_, email, amount, dueDate] = m;\nreturn {\n  json: {\n    chatId,\n    sendTo: email,\n    subject: `Payment reminder - due ${dueDate}`,\n    message: [\n      'Hi,',\n      '',\n      `This is a friendly reminder for the pending payment of ${amount}.`,\n      `Due date: ${dueDate}.`,\n      '',\n      'Thanks.'\n    ].join('\\n'),\n    ackText: `Reminder prepared for ${email}`\n  }\n};"
+      },
+      "id": "2e0116ca-b24b-4dc5-a4f6-d678fc702337",
+      "name": "Parse Reminder Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.message}}",
+        "options": {}
+      },
+      "id": "ed2aec13-5644-4710-951d-8d791ff22431",
+      "name": "Gmail Send Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "16049f82-5f60-4c12-99e0-cc7e1203d1f0",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Reminder Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reminder Command": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Reminder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "00453744-bb5a-4fac-b091-fb3c1c0eb168",
+  "tags": []
+}

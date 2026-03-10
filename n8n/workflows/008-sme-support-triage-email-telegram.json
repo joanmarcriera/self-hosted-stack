@@ -1,0 +1,90 @@
+{
+  "id": "2aac44a0-31c4-46fb-b13a-295c1f37c39d",
+  "name": "SME 03 - Support Inbox Triage -> Telegram",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Support Gmail Trigger** (`gmail_support_oauth`)\n2. Add credential to **Telegram Support Alert** (`telegram_bot_main`)\n3. Replace `REPLACE_CHAT_ID` in `Classify Ticket`\n4. In Gmail trigger, set filters/label for support inbox only\n5. Activate and send a test support email",
+        "height": 340,
+        "width": 490,
+        "color": 5
+      },
+      "id": "b48848fe-28f9-4293-a038-4bc9c90517f2",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": true,
+        "filters": {},
+        "options": {}
+      },
+      "id": "917c9092-a9e5-454b-bc3b-b70cd9d64044",
+      "name": "Support Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [300, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const subject = j.subject || '(no subject)';\n  const from = j.from?.value?.[0]?.address || j.from || 'unknown';\n  const snippet = [j.snippet, j.textPlain, j.bodyPlain].filter(Boolean).join('\\n').slice(0, 400);\n  const combined = `${subject}\\n${snippet}`;\n\n  let priority = 'P3';\n  if (/urgent|down|outage|asap/i.test(combined)) priority = 'P1';\n  else if (/invoice|billing|refund|payment/i.test(combined)) priority = 'P2';\n\n  out.push({\n    json: {\n      chatId: 'REPLACE_CHAT_ID',\n      telegramText: [\n        `Support ticket ${priority}`,\n        `From: ${from}`,\n        `Subject: ${subject}`,\n        '',\n        snippet || '(no preview)'\n      ].join('\\n')\n    }\n  });\n}\nreturn out;"
+      },
+      "id": "36b62c22-3b1c-4609-be04-b6cc37695ba7",
+      "name": "Classify Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 360]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "c68f3745-dd35-429e-acb4-02316cc35dd2",
+      "name": "Telegram Support Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 360]
+    }
+  ],
+  "connections": {
+    "Support Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Ticket": {
+      "main": [
+        [
+          {
+            "node": "Telegram Support Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "446b2b61-f0f5-4251-90e0-26c5bc8673d1",
+  "tags": []
+}

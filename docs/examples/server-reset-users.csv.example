@@ -1,0 +1,4 @@
+username,full_name,email,authentik_groups,authentik_password,n8n_access
+founder@example.com,Founder Name,founder@example.com,automation-founders,replace-with-initial-password,owner
+alex,Alex Serra,alex@example.com,automation-delivery,replace-with-initial-password,none
+marta,Marta Costa,marta@example.com,automation-ops,replace-with-initial-password,none

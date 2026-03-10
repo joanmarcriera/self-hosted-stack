@@ -1,0 +1,111 @@
+{
+  "id": "92e19cc6-f75b-42fc-8fac-63182527aa49",
+  "name": "SME 04 - Support Reply Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send** (`gmail_support_oauth`)\n3. Command format: `/supportreply <email> <message>`\n4. Replace fallback target email in parser\n5. Activate when command tests pass",
+        "height": 340,
+        "width": 510,
+        "color": 4
+      },
+      "id": "2a821fb6-cd40-40e5-9ddc-eb9ec6f380b4",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "1366e727-9049-4b51-9e66-c9b8c529967e",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/supportreply\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: 'support@example.com',\n      subject: 'Re: Support request',\n      message: '',\n      ackText: 'Usage: /supportreply <email> <message>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    sendTo: m[1],\n    subject: 'Re: Support request',\n    message: m[2].trim(),\n    ackText: `Prepared support reply to ${m[1]}`\n  }\n};"
+      },
+      "id": "ebc5cd1c-7a00-488e-948c-be6c68de8283",
+      "name": "Parse Support Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.message}}",
+        "options": {}
+      },
+      "id": "23087c06-dfe0-4322-93f7-d0aec05e9321",
+      "name": "Gmail Send",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "acd58850-5943-4292-be75-351fa653c046",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Support Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Support Reply": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "9cb03807-114c-4919-81fc-538ce05c9a98",
+  "tags": []
+}

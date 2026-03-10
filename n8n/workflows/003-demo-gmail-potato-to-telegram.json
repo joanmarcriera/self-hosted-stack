@@ -1,0 +1,90 @@
+{
+  "id": "7d74d9e8-2c7f-44ef-ad8e-31193873f4ee",
+  "name": "DEMO - Gmail Potato -> Telegram Alert",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Gmail Trigger** (`gmail_rb4family_oauth`)\n2. Add credential to **Telegram Alert** (`telegram_bot_main`)\n3. Replace `REPLACE_CHAT_ID` in `Detect Potato` code\n4. (Optional) Restrict to test subject: `[POTATO TEST]`\n5. Activate workflow",
+        "height": 340,
+        "width": 420,
+        "color": 6
+      },
+      "id": "e0fd8660-5538-4b63-bfc7-cdb3ddc2f0d4",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": true,
+        "filters": {},
+        "options": {}
+      },
+      "id": "ee02ab50-6219-4f97-a916-bbfe6b859021",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [280, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const subject = j.subject || '';\n  const text = [j.textPlain, j.textHtml, j.snippet, j.bodyPlain].filter(Boolean).join('\\n');\n  const combined = `${subject}\\n${text}`;\n  if (!/potato/i.test(combined)) continue;\n\n  const from = j.from?.value?.[0]?.address || j.from || 'unknown';\n  const replyTo = j.replyTo?.value?.[0]?.address || from;\n\n  out.push({\n    json: {\n      chatId: 'REPLACE_CHAT_ID',\n      telegramText: [\n        '🥔 Potato email detected',\n        `From: ${from}`,\n        `Subject: ${subject || '(no subject)'}`,\n        `Reply-To: ${replyTo}`,\n        '',\n        'Tomorrow: connect this to the reply workflow.'\n      ].join('\\n')\n    }\n  });\n}\nreturn out;"
+      },
+      "id": "ddbd8f18-c106-4771-9df8-c45ff77f478c",
+      "name": "Detect Potato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 360]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.telegramText}}",
+        "additionalFields": {}
+      },
+      "id": "278b5ecf-fc8f-40e7-9234-e749de2f4f91",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [840, 360]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Detect Potato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Potato": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "9c39356e-b4c0-41e6-8f13-fe9fd8ca8d2a",
+  "tags": []
+}

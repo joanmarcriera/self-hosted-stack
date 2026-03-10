@@ -1,0 +1,115 @@
+{
+  "id": "e6d48c5f-ca3d-4a10-8d88-270bbc720f62",
+  "name": "SME 08 - KPI Capture Command -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram KPI Ack** (`telegram_bot_main`)\n2. Add credential to **Google Sheets KPI Log** (`gsheets_oauth`)\n3. Command format: `/kpi <revenue> <leads> <calls>`\n4. Set target spreadsheet + `KPI_Log` sheet\n5. Activate and send one test KPI command",
+        "height": 340,
+        "width": 500,
+        "color": 5
+      },
+      "id": "0c92e283-1450-469c-8c29-c4a70de83b3b",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "d497438d-0649-4369-9208-cebb85c2aef3",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/kpi\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      revenue: '',\n      leads: '',\n      calls: '',\n      capturedAt: new Date().toISOString(),\n      ackText: 'Usage: /kpi <revenue> <leads> <calls>'\n    }\n  };\n}\n\nreturn {\n  json: {\n    chatId,\n    revenue: m[1],\n    leads: m[2],\n    calls: m[3],\n    capturedAt: new Date().toISOString(),\n    ackText: `KPI captured: revenue ${m[1]}, leads ${m[2]}, calls ${m[3]}`\n  }\n};"
+      },
+      "id": "83d8fba8-4365-413e-a189-f0d4558edc48",
+      "name": "Parse KPI Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "KPI_Log"
+        },
+        "options": {}
+      },
+      "id": "99bdc79b-14d2-4e3c-91c1-7365b3d718da",
+      "name": "Google Sheets KPI Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "4d68aba1-27aa-4b49-8b15-1f45f06453a2",
+      "name": "Telegram KPI Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse KPI Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse KPI Command": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets KPI Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram KPI Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "e6226974-1c07-45b1-9fc5-c06d6129b436",
+  "tags": []
+}

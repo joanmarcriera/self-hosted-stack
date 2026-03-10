@@ -1,0 +1,4 @@
+interface:
+  display_name: "Token-Efficient Context"
+  short_description: "Locate only the minimum repo context needed for a request."
+  default_prompt: "Find the smallest set of files/lines required and answer briefly."

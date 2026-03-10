@@ -1,0 +1,96 @@
+{
+  "id": "c53f0f3a-4e29-4749-a843-5de7648c25aa",
+  "name": "FAMILY 06 - Homework Webhook -> Google Sheets",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Google Sheets Homework** (`gsheets_oauth`)\n2. Set spreadsheet ID + sheet name (`Homework`)\n3. Set final webhook path and connect your source (form/app)\n4. Optional: add Telegram alert later if needed\n5. Activate after at least 2 test payloads",
+        "height": 340,
+        "width": 520,
+        "color": 4
+      },
+      "id": "5e90bb4d-7fe1-41d4-a8b0-ab13be9c54fe",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "family-homework",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "d054dbc1-6e23-4da4-ae5a-a79a21de6314",
+      "name": "Homework Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 360]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nreturn {\n  json: {\n    kid: body.kid || body.child || 'Unknown',\n    subject: body.subject || 'Unknown',\n    task: body.task || body.homework || '',\n    dueDate: body.dueDate || body.due || '',\n    submitted: body.submitted || 'no',\n    capturedAt: new Date().toISOString()\n  }\n};"
+      },
+      "id": "4065f4f2-92fe-4271-b08e-caf4e45bf610",
+      "name": "Normalize Homework",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 360]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REPLACE_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Homework"
+        },
+        "options": {}
+      },
+      "id": "9e7e501a-8a28-4b27-bbdf-cabe8b420c9f",
+      "name": "Google Sheets Homework",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [860, 360]
+    }
+  ],
+  "connections": {
+    "Homework Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Homework",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Homework": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Homework",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "b5664e1f-e4bc-4cb4-840a-1d911a525f9e",
+  "tags": []
+}

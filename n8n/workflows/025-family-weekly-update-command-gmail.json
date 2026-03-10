@@ -1,0 +1,111 @@
+{
+  "id": "3fb64709-6a37-4249-a3e0-56b851a337ac",
+  "name": "FAMILY 10 - Weekly Family Update Command -> Gmail",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## TODO before enabling\n1. Add credential to **Telegram Trigger** + **Telegram Ack** (`telegram_bot_main`)\n2. Add credential to **Gmail Send Family Update** (`gmail_rb4family_oauth`)\n3. Command format: `/familyweekly <toEmail> <weekLabel>`\n4. Replace template sections in `Build Weekly Email`\n5. Activate after dry-run to your own email",
+        "height": 350,
+        "width": 510,
+        "color": 7
+      },
+      "id": "0b267709-8a11-450d-b2d8-f321f98893a4",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "1756d933-db20-45a6-b284-f23a9c8e0495",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chatId = String($json.message?.chat?.id || '');\nconst text = ($json.message?.text || '').trim();\nconst m = text.match(/^\\/familyweekly\\s+(\\S+)\\s+([\\s\\S]+)/i);\n\nif (!chatId) throw new Error('No chat id in Telegram payload');\n\nif (!m) {\n  return {\n    json: {\n      chatId,\n      sendTo: '',\n      subject: '',\n      body: '',\n      ackText: 'Usage: /familyweekly <toEmail> <weekLabel>'\n    }\n  };\n}\n\nconst toEmail = m[1];\nconst weekLabel = m[2].trim();\n\nreturn {\n  json: {\n    chatId,\n    sendTo: toEmail,\n    subject: `Family weekly update - ${weekLabel}`,\n    body: [\n      `Weekly family update (${weekLabel})`,\n      '',\n      'School: TODO',\n      'Activities: TODO',\n      'Meals/groceries: TODO',\n      'Appointments: TODO',\n      '',\n      'Generated from n8n family workflow draft.'\n    ].join('\\n'),\n    ackText: `Weekly family update prepared for ${toEmail}`\n  }\n};"
+      },
+      "id": "ecea1f7b-2cec-4420-a032-ef81af3ba952",
+      "name": "Build Weekly Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 380]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{$json.sendTo}}",
+        "subject": "={{$json.subject}}",
+        "emailType": "text",
+        "message": "={{$json.body}}",
+        "options": {}
+      },
+      "id": "273d061f-4d7a-4828-8598-063310187d77",
+      "name": "Gmail Send Family Update",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ackText}}",
+        "additionalFields": {}
+      },
+      "id": "c274be0b-e045-4834-9f0a-a246c7f15aba",
+      "name": "Telegram Ack",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [860, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Weekly Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Weekly Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send Family Update",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "790e3b30-f959-4d0c-8904-3cb95236a10e",
+  "tags": []
+}
