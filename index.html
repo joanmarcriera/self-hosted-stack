@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SME Automation Stack</title>
+  <meta name="description" content="A compact public front door for a reproducible SME automation stack built around CRM, docs, tasks, workflows, and monitoring.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --text: #1e201c;
+      --muted: #5d6259;
+      --line: rgba(30, 32, 28, 0.1);
+      --panel: rgba(255, 252, 247, 0.82);
+      --accent: #0f766e;
+      --accent-2: #c96032;
+      --accent-3: #204e64;
+      --shadow: 0 28px 64px rgba(32, 78, 100, 0.12);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 15%, rgba(201, 96, 50, 0.18), transparent 28%),
+        radial-gradient(circle at 82% 20%, rgba(15, 118, 110, 0.14), transparent 24%),
+        radial-gradient(circle at 78% 80%, rgba(32, 78, 100, 0.12), transparent 22%),
+        linear-gradient(180deg, #fbf7ef 0%, var(--bg) 58%, #ebe4d8 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(30, 32, 28, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 32, 28, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.45), transparent 85%);
+      pointer-events: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .shell {
+      width: min(1160px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.5rem 0 4rem;
+      position: relative;
+    }
+
+    .topbar,
+    .hero,
+    .stack-card,
+    .service-card,
+    .flow-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      border-radius: 999px;
+      padding: 0.9rem 1.15rem;
+      margin-bottom: 1.4rem;
+    }
+
+    .brand {
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      font-size: 1.05rem;
+    }
+
+    .topnav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 0.5rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      border: 1px solid rgba(30, 32, 28, 0.06);
+    }
+
+    .hero {
+      border-radius: 34px;
+      padding: 2.6rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 1.2rem;
+      overflow: hidden;
+    }
+
+    .hero-copy {
+      position: relative;
+    }
+
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      right: -5rem;
+      top: -7rem;
+      width: 18rem;
+      height: 18rem;
+      background: radial-gradient(circle, rgba(15, 118, 110, 0.16), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      color: var(--accent);
+      background: rgba(15, 118, 110, 0.08);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 1rem 0 0.9rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(3rem, 5vw, 5.4rem);
+      line-height: 0.94;
+      letter-spacing: -0.08em;
+      max-width: 10ch;
+    }
+
+    .lead {
+      max-width: 60ch;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 1.04rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.95rem 1.2rem;
+      border-radius: 999px;
+      font-weight: 700;
+      transition: transform 180ms ease;
+    }
+
+    .button:hover { transform: translateY(-2px); }
+
+    .button-primary {
+      color: #f6fbfa;
+      background: linear-gradient(135deg, var(--accent), #125a55);
+      box-shadow: 0 14px 24px rgba(15, 118, 110, 0.2);
+    }
+
+    .button-secondary {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(30, 32, 28, 0.08);
+    }
+
+    .signal-grid,
+    .service-grid {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .signal-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stack-side {
+      display: grid;
+      gap: 1rem;
+      align-content: start;
+    }
+
+    .stack-card,
+    .flow-card,
+    .service-card {
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .signal {
+      border-radius: 22px;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(30, 32, 28, 0.06);
+    }
+
+    .signal strong,
+    .stack-card strong {
+      display: block;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.02rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .stack-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .stack-card big {
+      display: block;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.8rem;
+      letter-spacing: -0.06em;
+      margin-bottom: 0.35rem;
+    }
+
+    .stack-card p,
+    .flow-card p,
+    .service-card p,
+    .signal span {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .flow-list {
+      display: grid;
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: 2.2rem minmax(0, 1fr);
+      gap: 0.8rem;
+      align-items: start;
+    }
+
+    .flow-step b {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.2rem;
+      height: 2.2rem;
+      border-radius: 50%;
+      background: rgba(201, 96, 50, 0.12);
+      color: var(--accent-2);
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: end;
+      margin: 2.2rem 0 1rem;
+    }
+
+    .section-head h2,
+    .flow-card h2 {
+      margin: 0 0 0.55rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: -0.04em;
+    }
+
+    .service-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .service-card {
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .service-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(15, 118, 110, 0.24);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .tag {
+      display: inline-flex;
+      margin-bottom: 0.8rem;
+      padding: 0.34rem 0.56rem;
+      border-radius: 999px;
+      background: rgba(32, 78, 100, 0.08);
+      color: var(--accent-3);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .service-card h3 {
+      margin: 0 0 0.45rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.16rem;
+      letter-spacing: -0.04em;
+    }
+
+    .service-link {
+      display: inline-block;
+      margin-top: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    footer {
+      margin-top: 1.5rem;
+      padding-top: 1.2rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .service-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .signal-grid,
+      .stack-metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100% - 1rem, 1160px);
+        padding-top: 1rem;
+      }
+
+      .topbar {
+        border-radius: 24px;
+        padding: 1rem;
+      }
+
+      .hero,
+      .stack-card,
+      .flow-card,
+      .service-card {
+        border-radius: 24px;
+      }
+
+      .hero {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">sme.riera.co.uk</div>
+      <nav class="topnav" aria-label="Public navigation">
+        <a class="pill" href="https://joanmarcriera.es/">Stack</a>
+        <a class="pill" href="https://docs.joanmarcriera.es/">Docs</a>
+        <a class="pill" href="https://crm.joanmarcriera.es/">CRM</a>
+        <a class="pill" href="https://status.joanmarcriera.es/d/stack-overview/stack-overview">Status</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">SME Automation Demonstration</div>
+        <h1>A modern operating stack for small companies.</h1>
+        <p class="lead">
+          This public site fronts a reproducible self-hosted stack for a three-person automation consultancy.
+          It is designed to show how lead intake, delivery coordination, documentation, workflows, and monitoring
+          can fit together without turning into a heavyweight enterprise maze.
+        </p>
+        <div class="actions">
+          <a class="button button-primary" href="https://joanmarcriera.es/">Open the Live Stack</a>
+          <a class="button button-secondary" href="https://status.joanmarcriera.es/d/stack-overview/stack-overview">View Monitoring</a>
+        </div>
+        <div class="signal-grid">
+          <div class="signal">
+            <strong>Capture demand</strong>
+            <span>CRM and n8n turn raw enquiries into structured delivery work.</span>
+          </div>
+          <div class="signal">
+            <strong>Run delivery</strong>
+            <span>Tasks, SOPs, and handover notes stay aligned instead of scattered.</span>
+          </div>
+          <div class="signal">
+            <strong>Show trust</strong>
+            <span>Monitoring and recovery are visible from the same operating surface.</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="stack-side">
+        <div class="stack-metrics">
+          <section class="stack-card">
+            <big>6</big>
+            <p>core surfaces connected through one operating model.</p>
+          </section>
+          <section class="stack-card">
+            <big>3 roles</big>
+            <p>founder, delivery, and operations personas for a believable SME demo.</p>
+          </section>
+        </div>
+        <section class="flow-card">
+          <h2>Example delivery loop</h2>
+          <p>A client request should become a documented, monitorable delivery system with as little friction as possible.</p>
+          <div class="flow-list">
+            <div class="flow-step">
+              <b>1</b>
+              <div>A lead lands in EspoCRM and triggers an n8n workflow for intake, routing, or follow-up.</div>
+            </div>
+            <div class="flow-step">
+              <b>2</b>
+              <div>Discovery notes, runbooks, and handover material are written in BookStack instead of disappearing in chat.</div>
+            </div>
+            <div class="flow-step">
+              <b>3</b>
+              <div>Tasks move in Vikunja while Grafana tracks service health and future funnel telemetry.</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Live stack surfaces</h2>
+          <p>Each app does one job. The value is in the links between them.</p>
+        </div>
+      </div>
+
+      <div class="service-grid">
+        <a class="service-card" href="https://auth.joanmarcriera.es/">
+          <span class="tag">Identity</span>
+          <h3>Authentik</h3>
+          <p>Central login, recovery, and role separation across the shared workspace.</p>
+          <span class="service-link">auth.joanmarcriera.es</span>
+        </a>
+
+        <a class="service-card" href="https://n8n.joanmarcriera.es/">
+          <span class="tag">Automation</span>
+          <h3>n8n</h3>
+          <p>Workflows, webhooks, and the reusable automation layer for SME delivery.</p>
+          <span class="service-link">n8n.joanmarcriera.es</span>
+        </a>
+
+        <a class="service-card" href="https://docs.joanmarcriera.es/">
+          <span class="tag">Knowledge</span>
+          <h3>BookStack</h3>
+          <p>Discovery notes, SOPs, implementation guidance, and client handover pages.</p>
+          <span class="service-link">docs.joanmarcriera.es</span>
+        </a>
+
+        <a class="service-card" href="https://tasks.joanmarcriera.es/">
+          <span class="tag">Delivery</span>
+          <h3>Vikunja</h3>
+          <p>Project execution, checklists, and ownership across a small team.</p>
+          <span class="service-link">tasks.joanmarcriera.es</span>
+        </a>
+
+        <a class="service-card" href="https://crm.joanmarcriera.es/">
+          <span class="tag">Pipeline</span>
+          <h3>EspoCRM</h3>
+          <p>Client record, opportunity tracking, and the commercial backbone of the demo.</p>
+          <span class="service-link">crm.joanmarcriera.es</span>
+        </a>
+
+        <a class="service-card" href="https://status.joanmarcriera.es/d/stack-overview/stack-overview">
+          <span class="tag">Monitoring</span>
+          <h3>Grafana</h3>
+          <p>Operational visibility now, and a base for future funnel and revenue dashboards later.</p>
+          <span class="service-link">status.joanmarcriera.es</span>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      Public front door on GitHub Pages. Live stack services continue to run on the self-hosted platform domain.
+    </footer>
+  </div>
+</body>
+</html>
