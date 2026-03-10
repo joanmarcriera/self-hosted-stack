@@ -190,7 +190,8 @@
     }
 
     .signal-grid,
-    .service-grid {
+    .service-grid,
+    .related-grid {
       display: grid;
       gap: 1rem;
     }
@@ -291,7 +292,8 @@
       letter-spacing: -0.04em;
     }
 
-    .service-grid {
+    .service-grid,
+    .related-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -341,7 +343,8 @@
 
     @media (max-width: 980px) {
       .hero,
-      .service-grid {
+      .service-grid,
+      .related-grid {
         grid-template-columns: 1fr;
       }
 
@@ -386,6 +389,8 @@
       <div class="brand">sme.riera.co.uk</div>
       <nav class="topnav" aria-label="Public navigation">
         <a class="pill" href="https://joanmarcriera.es/">Stack</a>
+        <a class="pill" href="https://riera.co.uk/">Riera</a>
+        <a class="pill" href="https://cxo.riera.co.uk/">CXO</a>
         <a class="pill" href="https://docs.joanmarcriera.es/">Docs</a>
         <a class="pill" href="https://crm.joanmarcriera.es/">CRM</a>
         <a class="pill" href="https://status.joanmarcriera.es/d/stack-overview/stack-overview">Status</a>
@@ -399,7 +404,8 @@
         <p class="lead">
           This public site fronts a reproducible self-hosted stack for a three-person automation consultancy.
           It is designed to show how lead intake, delivery coordination, documentation, workflows, and monitoring
-          can fit together without turning into a heavyweight enterprise maze.
+          can fit together without turning into a heavyweight enterprise maze. It also sits inside a broader Riera
+          set of pages covering operator profile, strategy, and execution context.
         </p>
         <div class="actions">
           <a class="button button-primary" href="https://joanmarcriera.es/">Open the Live Stack</a>
@@ -451,6 +457,38 @@
           </div>
         </section>
       </aside>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <div>
+          <h2>Related pages</h2>
+          <p>This stack is one surface in a wider operator narrative: who is behind it, what strategic layer it fits into, and how execution turns into a repeatable offer.</p>
+        </div>
+      </div>
+
+      <div class="related-grid">
+        <a class="service-card" href="https://riera.co.uk/">
+          <span class="tag">Profile</span>
+          <h3>riera.co.uk</h3>
+          <p>The broader personal and professional layer: operator background, selected work, and the wider context around the systems built here.</p>
+          <span class="service-link">riera.co.uk</span>
+        </a>
+
+        <a class="service-card" href="https://cxo.riera.co.uk/">
+          <span class="tag">Strategy</span>
+          <h3>cxo.riera.co.uk</h3>
+          <p>A higher-level lens on company systems, leadership, and decision-making around automation, growth, and execution.</p>
+          <span class="service-link">cxo.riera.co.uk</span>
+        </a>
+
+        <div class="service-card">
+          <span class="tag">Why this page exists</span>
+          <h3>sme.riera.co.uk</h3>
+          <p>The practical demonstration layer: what the operating stack looks like when strategy, tooling, and delivery are turned into something a small company can actually use.</p>
+          <span class="service-link">self-hosted SME demo</span>
+        </div>
+      </div>
     </section>
 
     <section>
