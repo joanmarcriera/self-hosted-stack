@@ -13,8 +13,10 @@ When a prospect fills out the contact form on sme.riera.co.uk:
 2. **Validates & normalizes** the payload (name, email, company_size, pain)
 3. **Creates a Lead** in EspoCRM (status: New, source: Web Site)
 4. **Sends a Telegram notification** to Marc with lead details
-5. **Creates a follow-up task** in Vikunja (due in 24h)
-6. **Returns** `{success: true}` to the form
+5. **Emails Marc** at joanmarcriera@gmail.com with a formatted lead summary
+6. **Sends a welcome email** to the lead thanking them and linking to the live status page
+7. **Creates a follow-up task** in Vikunja (due in 24h)
+8. **Returns** `{success: true}` to the form
 
 ---
 
@@ -40,6 +42,10 @@ Or import manually via n8n UI: Settings → Import from file → select `n8n/wor
 ---
 
 ## Step 2: Configure credentials in n8n
+
+### Gmail OAuth
+- In n8n, add a Gmail OAuth2 credential (`gmail_marc_oauth`) connected to joanmarcriera@gmail.com
+- Assign it to both "Email Notification to Marc" and "Welcome Email to Lead" nodes
 
 ### EspoCRM API
 - Create an API User in EspoCRM (Administration → API Users) with Lead create permission
