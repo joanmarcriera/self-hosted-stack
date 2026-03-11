@@ -1,0 +1,157 @@
+{
+  "id": "026-lead-intake-funnel",
+  "name": "SME 026 - Website Lead Funnel -> CRM + Telegram + Vikunja",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Website Lead Funnel\n\nCaptures leads from the sme.riera.co.uk landing page and routes them through the full stack.\n\n## TODO before enabling\n1. Add credential for **EspoCRM** (`espocrm_api`)\n2. Add credential for **Telegram** (`telegram_bot_main`)\n3. Add credential for **Vikunja** (or use HTTP Request with API token)\n4. Replace `REPLACE_CHAT_ID` with your Telegram chat ID\n5. Replace `REPLACE_VIKUNJA_PROJECT_ID` with the target project ID\n6. Replace `REPLACE_ESPOCRM_URL` with your EspoCRM base URL\n7. Configure CORS on n8n or Traefik for sme.riera.co.uk\n8. Test with curl, then activate",
+        "height": 400,
+        "width": 500,
+        "color": 7
+      },
+      "id": "todo-note-026",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [120, 20]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "https://sme.riera.co.uk"
+        }
+      },
+      "id": "webhook-026",
+      "name": "Website Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [300, 380]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\nconst name = (body.name || '').trim();\nconst email = (body.email || '').trim();\nconst companySize = body.company_size || '';\nconst pain = (body.pain || '').trim();\n\nif (!name || !email || !companySize) {\n  throw new Error('Missing required fields: name, email, or company_size');\n}\n\nconst lead = {\n  name: name,\n  email: email,\n  companySize: companySize,\n  pain: pain,\n  source: 'sme.riera.co.uk',\n  receivedAt: new Date().toISOString()\n};\n\nconst chatId = 'REPLACE_CHAT_ID';\n\nconst telegramText = [\n  '\\u{1f4e5} New lead from website',\n  '',\n  'Name: ' + lead.name,\n  'Email: ' + lead.email,\n  'Company size: ' + lead.companySize,\n  'Pain: ' + (lead.pain || '(not provided)'),\n  '',\n  'Source: ' + lead.source,\n  'Time: ' + lead.receivedAt\n].join('\\n');\n\nreturn {\n  json: {\n    ...lead,\n    chatId: chatId,\n    telegramText: telegramText\n  }\n};"
+      },
+      "id": "normalize-026",
+      "name": "Validate & Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 380]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "REPLACE_ESPOCRM_URL/api/v1/Lead",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ firstName: $json.name.split(' ')[0], lastName: $json.name.split(' ').slice(1).join(' ') || '-', emailAddress: $json.email, description: 'Company size: ' + $json.companySize + '\\nPain: ' + ($json.pain || 'N/A') + '\\nSource: ' + $json.source, status: 'New', source: 'Web Site' }) }}"
+      },
+      "id": "espocrm-026",
+      "name": "Create Lead in EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 260]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.telegramText }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-026",
+      "name": "Notify via Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [740, 380]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://tasks.joanmarcriera.es/api/v1/projects/REPLACE_VIKUNJA_PROJECT_ID/tasks",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: 'Follow up with ' + $json.name + ' (' + $json.companySize + ')', description: 'Email: ' + $json.email + '\\nPain: ' + ($json.pain || 'N/A') + '\\nSource: ' + $json.source, due_date: new Date(Date.now() + 86400000).toISOString() }) }}"
+      },
+      "id": "vikunja-026",
+      "name": "Create Follow-up Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [740, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Thanks! We will be in touch within 24 hours.' }) }}"
+      },
+      "id": "respond-026",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 380]
+    }
+  ],
+  "connections": {
+    "Website Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Normalize": {
+      "main": [
+        [
+          {
+            "node": "Create Lead in EspoCRM",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify via Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead in EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "sme"
+    },
+    {
+      "name": "lead-funnel"
+    }
+  ]
+}
