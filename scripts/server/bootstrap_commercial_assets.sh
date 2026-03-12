@@ -30,6 +30,15 @@ upsert_env() {
   fi
 }
 
+drop_env() {
+  local file="$1"
+  local key="$2"
+
+  if [[ -f "$file" ]]; then
+    sed -i'' -e "/^${key}=/d" "$file"
+  fi
+}
+
 require_file "$core_env"
 require_file "$identity_env"
 require_file "$business_env"
@@ -82,6 +91,8 @@ lead_capture_api_key="$(printf '%s\n' "$lead_capture_output" | sed -n 's/^ESPOCR
 
 upsert_env "$automation_env" "ESPOCRM_API_BASE_URL" "https://${CRM_HOST}"
 upsert_env "$automation_env" "ESPOCRM_LEAD_CAPTURE_API_KEY" "$lead_capture_api_key"
+drop_env "$automation_env" "ESPOCRM_API_KEY"
+drop_env "$automation_env" "ESPOCRM_API_USER"
 
 install -m 0644 "$repo_automation_compose" "${stack_root}/automation/docker-compose.yml"
 
