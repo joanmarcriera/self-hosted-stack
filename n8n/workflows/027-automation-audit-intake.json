@@ -1,0 +1,141 @@
+{
+  "id": "027-automation-audit-intake",
+  "name": "SME 027 - Automation Audit Intake -> EspoCRM",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Automation Audit Intake\n\nCommercial intake for riera.co.uk.\n\nRequired env vars in the n8n container:\n- `ESPOCRM_API_BASE_URL`\n- `ESPOCRM_LEAD_CAPTURE_API_KEY`\n\nThis workflow uses EspoCRM Lead Capture instead of a general API user, so it can write leads without extra ACL setup. Qualification, payment, and scheduling happen after review.",
+        "height": 300,
+        "width": 420,
+        "color": 7
+      },
+      "id": "note-027",
+      "name": "TODO",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        120,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://riera.co.uk"
+        }
+      },
+      "id": "webhook-027",
+      "name": "Automation Audit Webhook",
+      "webhookId": "automation-audit-intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const body = $json.body || $json;\n\nconst asText = (key) => {\n  const value = body[key];\n  return typeof value === 'string' ? value.trim() : '';\n};\n\nconst toBool = (value) => {\n  if (typeof value === 'boolean') return value;\n  if (typeof value === 'number') return value === 1;\n  if (typeof value !== 'string') return false;\n  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());\n};\n\nconst form = {\n  name: asText('name'),\n  email: asText('email'),\n  company: asText('company'),\n  website: asText('website'),\n  team_size: asText('team_size'),\n  current_tools: asText('current_tools'),\n  repetitive_process: asText('repetitive_process'),\n  admin_time_lost: asText('admin_time_lost'),\n  desired_outcome: asText('desired_outcome'),\n  contact_consent: toBool(body.contact_consent)\n};\n\nconst missing = Object.entries(form)\n  .filter(([key, value]) => key !== 'contact_consent' && !value)\n  .map(([key]) => key);\n\nif (missing.length) {\n  throw new Error(`Missing required fields: ${missing.join(', ')}`);\n}\n\nif (!form.contact_consent) {\n  throw new Error('Contact consent is required');\n}\n\nlet cleanWebsite = form.website;\nif (!/^https?:\\/\\//i.test(cleanWebsite)) {\n  cleanWebsite = `https://${cleanWebsite}`;\n}\n\nif (!/^https?:\\/\\/[^\\s]+$/i.test(cleanWebsite)) {\n  throw new Error('Website must be a valid URL');\n}\n\nconst parts = form.name.split(/\\s+/).filter(Boolean);\nconst firstName = parts[0];\nconst lastName = parts.slice(1).join(' ') || '-';\nconst receivedAt = new Date().toISOString();\nconst source = 'riera.co.uk';\n\nconst leadDescription = [\n  'Paid Automation Audit request',\n  '',\n  `Team size: ${form.team_size}`,\n  `Current tools: ${form.current_tools}`,\n  `Most repetitive process: ${form.repetitive_process}`,\n  `Estimated admin time lost: ${form.admin_time_lost}`,\n  `Desired outcome: ${form.desired_outcome}`,\n  `Contact consent: ${form.contact_consent ? 'yes' : 'no'}`,\n  `Source: ${source}`,\n  `Received at: ${receivedAt}`\n].join('\\n');\n\nreturn {\n  json: {\n    ...form,\n    firstName,\n    lastName,\n    website: cleanWebsite,\n    source,\n    receivedAt,\n    leadDescription\n  }\n};"
+      },
+      "id": "normalize-027",
+      "name": "Validate & Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ESPOCRM_API_BASE_URL + '/api/v1/LeadCapture/' + $env.ESPOCRM_LEAD_CAPTURE_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ firstName: $json.firstName, lastName: $json.lastName, accountName: $json.company, emailAddress: $json.email, website: $json.website, status: 'New', source: 'Web Site', description: $json.leadDescription }) }}",
+        "options": {}
+      },
+      "id": "espocrm-027",
+      "name": "Create Lead in EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Audit request received. Reply and scheduling follow by email.', source: 'riera.co.uk' }) }}"
+      },
+      "id": "respond-027",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        360
+      ]
+    }
+  ],
+  "connections": {
+    "Automation Audit Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Normalize": {
+      "main": [
+        [
+          {
+            "node": "Create Lead in EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead in EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/London"
+  },
+  "pinData": {},
+  "meta": null,
+  "versionId": "f718a99d-3fd2-4b9d-8b0f-e682c4ccbd80",
+  "tags": [
+    {
+      "name": "sme"
+    },
+    {
+      "name": "commercial"
+    },
+    {
+      "name": "lead-funnel"
+    }
+  ]
+}

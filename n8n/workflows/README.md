@@ -41,5 +41,7 @@ Canonical workflow examples for this repo.
 
 ## Important
 
+- `026-lead-intake-funnel.json` - older broad website lead funnel example for `sme.riera.co.uk`.
+- `027-automation-audit-intake.json` - paid Automation Audit intake for `riera.co.uk` into EspoCRM.
 - Keep each workflow `id` unchanged to preserve update-in-place behavior when importing.
 - Full setup checklist: `n8n/TOMORROW-CONFIG.md`.
