@@ -1,5 +1,7 @@
 # self-hosted-stack
 
+**Published docs:** [sme.riera.co.uk](https://sme.riera.co.uk)
+
 ## Start Here
 - reproducible rebuild guide: `docs/reproducible-stack.md`
 - Reuse playbook: `docs/operations-reuse-playbook.md`
