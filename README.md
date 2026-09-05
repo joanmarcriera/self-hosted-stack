@@ -1,5 +1,8 @@
 # self-hosted-stack
 
+**A deployable, reproducible self-hosted SME infrastructure stack** — Docker Compose services (Traefik, Authentik, n8n, BookStack, EspoCRM, Vikunja, monitoring), server hardening scripts, and operational playbooks for Debian 12. This repo mirrors `/opt/stacks/` on Marc's production Hetzner VPS; fresh-host rebuild supported via disaster-recovery handoff scripts.
+
+**To rebuild on a fresh Debian 12 host:** see `docs/reproducible-stack.md`.  
 **Published docs:** [sme.riera.co.uk](https://sme.riera.co.uk)
 
 ## Start Here
